@@ -77,7 +77,7 @@ The above will attempt to start a script with the name of "test" but, since the 
 The exectab.txt File Format
 ---------------------------
 
-Locate the Cloud Storage Server storage directory as specified by the configuration.  Within it are user ID directories.  Within a user ID directory is a set of other directories associated with each enabled and used extension.  Find the newly set up user account and the /scripts directory.  Within the /scripts directory is a SQLite database that tracks all script runs, a /status subdirectory, and a file called 'exectab.txt'.  This file is very similar to crontab except it doesn't do anything with scheduling.
+Locate the Cloud Storage Server storage directory as specified by the configuration.  Within it are user ID directories.  Within a user ID directory is a set of other directories associated with each enabled and used extension.  Find the newly set up user account and the /scripts directory.  Within the /scripts directory is a SQLite database that tracks all script runs, a /status subdirectory, and a file called 'exectab.txt'.  The 'exectab.txt' file is very similar to crontab except it doesn't have anything to do with scheduling.
 
 Example 'exectab.txt' file:
 
@@ -88,7 +88,7 @@ Example 'exectab.txt' file:
 # Run a PHP script as the same user/group as the Cloud Storage Server process (probably root) with a limit of one script running at a time and with a starting directory of /var/log/apache2.
 -d=/var/log/apache2 test2 /usr/bin/php /var/scripts/myscript2.php
 
-# Does not start any processed but will notify listening (via /scripts/v1/monitor) that 'test3' has finished running.
+# Does not start any processes but will notify listening (via /scripts/v1/monitor) that 'test3' has finished running.
 test3
 ````
 
