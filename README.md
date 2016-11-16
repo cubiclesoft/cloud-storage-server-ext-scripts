@@ -77,7 +77,7 @@ The above will attempt to start a script with the name of "test" but, since the 
 The exectab.txt File Format
 ---------------------------
 
-Locate the Cloud Storage Server directory.  Within it are user ID directories.  Within a user ID directory is a set of other directories associated with each enabled and used extension.  Find the newly set up user account and the /scripts directory.  Within the /scripts directory is a SQLite database that tracks all script runs, a /status subdirectory, and a file called 'exectab.txt'.  This file is very similar to crontab except it doesn't do anything with scheduling.
+Locate the Cloud Storage Server storage directory as specified by the configuration.  Within it are user ID directories.  Within a user ID directory is a set of other directories associated with each enabled and used extension.  Find the newly set up user account and the /scripts directory.  Within the /scripts directory is a SQLite database that tracks all script runs, a /status subdirectory, and a file called 'exectab.txt'.  This file is very similar to crontab except it doesn't do anything with scheduling.
 
 Example 'exectab.txt' file:
 
