@@ -150,8 +150,20 @@ Example monitoring script:
 <?php
 	require_once "sdk/support/sdk_cloud_storage_server_scripts.php";
 
+	// Temporary root.
+	$rootpath = str_replace("\\", "/", dirname(__FILE__));
+
 	$css = new CloudStorageServerScripts();
-	$css->SetAccessInfo("https://remoteserver.com:9892", "YOUR_API_KEY", "", "");
+
+	@mkdir($rootpath . "/cache", 0775);
+	$result = $css->InitSSLCache("https://remoteserver.com:9892", $rootpath . "/cache/css_ca.pem", $rootpath . "/cache/css_cert.pem");
+	if (!$result["success"])
+	{
+		var_dump($result);
+		exit();
+	}
+
+	$css->SetAccessInfo("https://remoteserver.com:9892", "YOUR_API_KEY", $rootpath . "/cache/css_ca.pem", file_get_contents($rootpath . "/cache/css_cert.pem"));
 
 	$result = $css->StartMonitoring("test");
 	if (!$result["success"])
