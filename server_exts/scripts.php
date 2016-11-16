@@ -155,7 +155,7 @@
 		{
 			$info = @json_decode($row->info, true);
 
-			return array("success" => true, "id" => $row->id, "state" => ($row->finished > 0 ? "done" : "incomplete_log"), "started" => (double)$row->started, "finished" => (double)$row->finished, "args" => $info["args"], "first" => (!count($info["tasks"]) ? $info["first"] : ""), "last" => (!count($info["tasks"]) ? $info["last"] : ""), "tasks" => $info["tasks"]);
+			return array("success" => true, "id" => $row->id, "name" => $row->script, "state" => ($row->finished > 0 ? "done" : "incomplete_log"), "started" => (double)$row->started, "finished" => (double)$row->finished, "args" => $info["args"], "first" => (!count($info["tasks"]) ? $info["first"] : ""), "last" => (!count($info["tasks"]) ? $info["last"] : ""), "tasks" => $info["tasks"]);
 		}
 
 		private function HasMonitor($uid, $name)
@@ -427,15 +427,14 @@
 			{
 				foreach ($names as $name => $idsinfo)
 				{
-					if (!isset($this->running[$uid]) || !isset($this->running[$uid][$name]) || count($this->running[$name]) < $this->exectabs[$uid]["opts"]["simultaneous"])
+					if (!isset($this->running[$uid]) || !isset($this->running[$uid][$name]) || !isset($this->exectabs[$uid][$name]) || count($this->running[$uid][$name]) < $this->exectabs[$uid][$name]["opts"]["simultaneous"])
 					{
 						foreach ($idsinfo as $id => $info)
 						{
-							if (isset($this->running[$uid]) && isset($this->running[$uid][$name]) && count($this->running[$uid][$name]) >= $this->exectabs[$uid]["opts"]["simultaneous"])  break;
+							if (isset($this->running[$uid]) && isset($this->running[$uid][$name]) && isset($this->exectabs[$uid][$name]) && count($this->running[$uid][$name]) >= $this->exectabs[$uid][$name]["opts"]["simultaneous"])  break;
 
 							// Remove this entry from the run queue.
 							unset($this->runqueue[$uid][$name][$id]);
-							unset($idsinfo2[$id]);
 							if (!count($this->runqueue[$uid][$name]))
 							{
 								unset($this->runqueue[$uid][$name]);
@@ -530,9 +529,6 @@
 										if ($groupinfo !== false)  posix_setegid($groupinfo["gid"]);
 									}
 								}
-
-								// Prepare the command-line.
-								foreach ($info["args"]["params"] as $num => $arg)  $info["args"]["params"][$num] = escapeshellarg($arg);
 
 								// Windows requires redirecting pipes through sockets so they can be configured to be non-blocking.
 								$os = php_uname("s");
@@ -907,7 +903,7 @@
 						$modified = true;
 					}
 
-					if ($modified)  $args["params"][$num] = $param;
+					if ($modified)  $args["params"][$num] = escapeshellarg($param);
 				}
 
 				$info = array(
