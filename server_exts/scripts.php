@@ -774,10 +774,10 @@
 				if (!file_exists($basedir . "/exectab.txt"))
 				{
 					$bytesdiff = 0;
-					if (!file_exists($rootpath . "/user_init/scripts/exectab.txt"))  $data = "";
-					else  $data = file_get_contents($rootpath . "/user_init/scripts/exectab.txt");
-					$bytesdiff = strlen($data);
-					file_put_contents($basedir . "/exectab.txt", $data);
+					if (!file_exists($rootpath . "/user_init/scripts/exectab.txt"))  $data2 = "";
+					else  $data2 = file_get_contents($rootpath . "/user_init/scripts/exectab.txt");
+					$bytesdiff = strlen($data2);
+					file_put_contents($basedir . "/exectab.txt", $data2);
 
 					// Adjust total bytes stored.
 					$userhelper->AdjustUserTotalBytes($userrow->id, $bytesdiff);
