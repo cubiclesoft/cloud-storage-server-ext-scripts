@@ -90,6 +90,9 @@ Example 'exectab.txt' file:
 
 # Does not start any processes but will notify listening (via /scripts/v1/monitor) that 'test3' has finished running.
 test3
+
+# Does not start any processes but passes unescaped parameters to 'test4'.
+test4 -n @@1 @@2
 ````
 
 The above defines three script names test, test2, and test3.  Each one does something different.  The format for script execution lines is:
@@ -103,6 +106,7 @@ The full list of options for scripts is:
 * -g=group - The *NIX group to run the process under (*NIX only).
 * -i - Allow 'stdin' passthrough.  Without this option, passing non-empty 'stdin' strings to /scripts/v1/run is an error.
 * -m=num - Maximum queue length.  Default is unlimited.
+* -n - No process execution.  No parameter escaping.  Useful for passing parameters to monitors.
 * -s=num - The number of items in the queue that may run simultaneously.  Default is 1.
 * -u=user - The *NIX user to run the process under (*NIX only).
 
@@ -129,6 +133,8 @@ While a process is running, it may write to either stdout or stderr.  The /scrip
 The first line specifies that it is the first of three tasks.  The rest of the line after the part in brackets becomes the task title/name.  The second line specifies a '%' sign before the closing bracket, which means that line is a subtask of the main task.  The title/name for a subtask is usually something like "Processing...".
 
 The title/name portion of a task/subtask is made available to via /scripts/v1/status API, which could be used, for example, to track progress in a web application.  Be sure to avoid exposing internal details of the server to the /scripts API.  All other lines of output are ignored by the /scripts extension, which allows most debugging information to be left in just in case the process needs to be run manually to diagnose some issue.
+
+Processes can be queued to launch in the future at a specified time.  Queued processes that have not started running can be cancelled with the /scripts/v1/cancel API.
 
 Localhost Performance
 ---------------------
@@ -216,12 +222,20 @@ POST /scripts/v1/run
 * name - Script name
 * args - An array of arguments to use to replace @@ tokens with
 * stdin - Data to pass through to stdin of the process
+* queue - Optional UNIX timestamp (integer) to specify when to start the process
 * Returns:  success (boolean), id (string), name (string), state (string), queued (integer, UNIX timestamp), position (integer)
 
-GET /scripts/v1/status/ID
+POST /scripts/v1/cancel/ID
 
 * ID - Script run ID
-* Returns:  success (boolean), id (string), name (string), state (string), additional info (various)
+* Returns: success (boolean)
+* Summary: Cancels a previously queued script that has not started running
+
+GET /scripts/v1/status[/ID]
+
+* ID - Script run ID
+* Returns (with ID):  success (boolean), id (string), name (string), state (string), additional info (various)
+* Returns (without ID):  success (boolean), queued (object), running (object)
 
 GET /scripts/v1/monitor (WebSocket only)
 

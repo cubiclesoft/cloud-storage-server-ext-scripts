@@ -259,6 +259,29 @@
 			if (!count($this->idmap[$uid]))  unset($this->idmap[$uid]);
 		}
 
+		private function RemoveRunQueueEntry($uid, $name, $id)
+		{
+			unset($this->runqueue[$uid][$name][$id]);
+			if (!count($this->runqueue[$uid][$name]))
+			{
+				unset($this->runqueue[$uid][$name]);
+				if (!count($this->runqueue[$uid]))  unset($this->runqueue[$uid]);
+			}
+			else
+			{
+				$num = 0;
+				foreach ($this->runqueue[$uid][$name] as $id2 => $info2)
+				{
+					$this->runqueue[$uid][$name][$id2]["queuepos"] = $num;
+					$info2["queuepos"] = $num;
+
+					@file_put_contents($info2["basedir"] . "/status/" . $id2 . ".json", json_encode($this->GetQueuedStatusResult($id2, $name, $info2), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+					$num++;
+				}
+			}
+		}
+
 		private function UpdateRunningScripts()
 		{
 			global $rootpath;
@@ -433,32 +456,17 @@
 						{
 							if (isset($this->running[$uid]) && isset($this->running[$uid][$name]) && isset($this->exectabs[$uid][$name]) && count($this->running[$uid][$name]) >= $this->exectabs[$uid][$name]["opts"]["simultaneous"])  break;
 
+							// Skip future run items.
+							if ($info["queued"] > time())  break;
+
 							// Remove this entry from the run queue.
-							unset($this->runqueue[$uid][$name][$id]);
-							if (!count($this->runqueue[$uid][$name]))
-							{
-								unset($this->runqueue[$uid][$name]);
-								if (!count($this->runqueue[$uid]))  unset($this->runqueue[$uid]);
-							}
-							else
-							{
-								$num = 0;
-								foreach ($this->runqueue[$uid][$name] as $id2 => $info2)
-								{
-									$this->runqueue[$uid][$name][$id2]["queuepos"] = $num;
-									$info2["queuepos"] = $num;
-
-									@file_put_contents($info2["basedir"] . "/status/" . $id2 . ".json", json_encode($this->GetQueuedStatusResult($id2, $name, $info2), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-
-									$num++;
-								}
-							}
+							$this->RemoveRunQueueEntry($uid, $name, $id);
 
 							// Connect to the database.
 							$result = self::GetUserScriptsDB($info["basedir"]);
 							$db = ($result["success"] ? $result["db"] : false);
 
-							if (!count($info["args"]["params"]))
+							if (!count($info["args"]["params"]) || (isset($this->exectabs[$uid][$name]) && $this->exectabs[$uid][$name]["opts"]["noexec"]))
 							{
 								// No process.  Just finalize the log entry and notify any monitors.
 								if ($db !== false)
@@ -789,7 +797,22 @@
 
 			// Parse 'exectab.txt' if it has changed since the last API call.
 			$filename = $basedir . "/exectab.txt";
-			if (!isset($this->exectabsts[$userrow->id]))  $this->exectabsts[$userrow->id] = 0;
+			if (!isset($this->exectabsts[$userrow->id]))
+			{
+				$this->exectabsts[$userrow->id] = 0;
+
+				// Delete any leftover /status files.
+				$dir = @opendir($basedir . "/status");
+				if ($dir)
+				{
+					while (($file = @readdir($dir)) !== false)
+					{
+						if ($file !== "." && $file !== "..")  @unlink($basedir . "/status/" . $file);
+					}
+
+					@closedir($dir);
+				}
+			}
 			if ($this->exectabsts[$userrow->id] < filemtime($filename) && filemtime($filename) < time())
 			{
 				require_once $rootpath . "/support/cli.php";
@@ -801,6 +824,7 @@
 						"g" => "group",
 						"i" => "stdinallowed",
 						"m" => "maxqueue",
+						"n" => "noexec",
 						"s" => "simultaneous",
 						"u" => "user"
 					),
@@ -810,6 +834,7 @@
 						"group" => array("arg" => true),
 						"stdinallowed" => array("arg" => false),
 						"maxqueue" => array("arg" => true),
+						"noexec" => array("arg" => false),
 						"simultaneous" => array("arg" => true),
 						"user" => array("arg" => true)
 					),
@@ -871,6 +896,8 @@
 				if (!is_array($data["args"]))  return array("success" => false, "error" => "Invalid 'args'.  Expected an array.", "errorcode" => "invalid_args");
 				if (!isset($data["stdin"]))  $data["stdin"] = "";
 				if (!is_string($data["stdin"]))  return array("success" => false, "error" => "Invalid 'stdin'.  Expected a string.", "errorcode" => "invalid_stdin");
+				if (!isset($data["queue"]))  $data["queue"] = time();
+				if (!is_int($data["queue"]))  return array("success" => false, "error" => "Invalid 'queue'.  Expected a UNIX timestamp integer.", "errorcode" => "invalid_queue");
 				if ($guestrow !== false && !$guestrow->serverexts["scripts"]["run"])  return array("success" => false, "error" => "Execute/Run access denied.", "errorcode" => "access_denied");
 				if ($guestrow !== false && $guestrow->serverexts["scripts"]["name"] !== $data["name"])  return array("success" => false, "error" => "Script status access denied to the specified name.", "errorcode" => "access_denied");
 
@@ -903,7 +930,7 @@
 						$modified = true;
 					}
 
-					if ($modified)  $args["params"][$num] = escapeshellarg($param);
+					if ($modified && !$args["opts"]["noexec"])  $args["params"][$num] = escapeshellarg($param);
 				}
 
 				$info = array(
@@ -933,10 +960,12 @@
 				}
 
 				// Add the process to the run queue.  Processes are started/updated during core cycles.
-				$this->runqueue[$userrow->id][$name][$id] = array(
+				if ($data["queue"] < time())  $data["queue"] = time();
+				$queue = array();
+				$qinfo = array(
 					"id" => $id,
-					"queued" => time(),
-					"queuepos" => count($this->runqueue[$userrow->id][$name]),
+					"queued" => $data["queue"],
+					"queuepos" => 0,
 					"basedir" => $basedir,
 					"args" => $args,
 					"proc" => false,
@@ -950,6 +979,30 @@
 					"subtaskpercent" => 0,
 					"loginfo" => $info
 				);
+				foreach ($this->runqueue[$userrow->id][$name] as $id2 => $info2)
+				{
+					if (!isset($queue[$id]) && $data["queue"] < $info2["queued"])
+					{
+						$qinfo["queuepos"] = count($queue);
+						$queue[$id] = $qinfo;
+					}
+
+					$info2["queuepos"] = count($queue);
+					$queue[$id2] = $info2;
+
+					if (isset($queue[$id]))
+					{
+						$result = $this->GetQueuedStatusResult($id2, $name, $info2);
+
+						@file_put_contents($basedir . "/status/" . $id2 . ".json", json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+					}
+				}
+				if (!isset($queue[$id]))
+				{
+					$qinfo["queuepos"] = count($queue);
+					$queue[$id] = $qinfo;
+				}
+				$this->runqueue[$userrow->id][$name] = $queue;
 
 				if (!isset($this->idmap[$userrow->id]))  $this->idmap[$userrow->id] = array();
 
@@ -967,54 +1020,111 @@
 
 				return $result;
 			}
-			else if ($pathparts[3] === "status")
+			else if ($pathparts[3] === "cancel")
 			{
-				// /scripts/v1/status/ID
-				if ($reqmethod !== "GET")  return array("success" => false, "error" => "GET request required for:  /scripts/v1/status/ID", "errorcode" => "use_get_request");
-				if ($y < 5)  return array("success" => false, "error" => "Missing script log ID for:  /scripts/v1/status/ID", "errorcode" => "missing_id");
-				if ($guestrow !== false && !$guestrow->serverexts["scripts"]["status"])  return array("success" => false, "error" => "Script status access denied.", "errorcode" => "access_denied");
+				// /scripts/v1/cancel/ID
+				if ($reqmethod !== "POST")  return array("success" => false, "error" => "POST request required for:  /scripts/v1/cancel/ID", "errorcode" => "use_post_request");
+				if ($y < 5)  return array("success" => false, "error" => "Missing script log ID for:  /scripts/v1/cancel/ID", "errorcode" => "missing_id");
+				if ($guestrow !== false && !$guestrow->serverexts["scripts"]["cancel"])  return array("success" => false, "error" => "Script cancel access denied.", "errorcode" => "access_denied");
 
 				$id = $pathparts[4];
 
 				// If the script is queued or running, then don't access the database.
-				if (isset($this->idmap[$userrow->id]) && isset($this->idmap[$userrow->id][$id]))
-				{
-					$info = $this->idmap[$userrow->id][$id];
-					$name = $info["name"];
-					if ($guestrow !== false && $guestrow->serverexts["scripts"]["name"] !== $name)  return array("success" => false, "error" => "Script status access denied to the specified name.", "errorcode" => "access_denied");
+				if (!isset($this->idmap[$userrow->id]) || !isset($this->idmap[$userrow->id][$id]))  return array("success" => false, "error" => "Script not queued or running.", "errorcode" => "script_not_queued_running");
 
-					if (!$info["running"])
-					{
-						$info = $this->runqueue[$userrow->id][$name][$id];
+				$info = $this->idmap[$userrow->id][$id];
+				$name = $info["name"];
+				if ($guestrow !== false && $guestrow->serverexts["scripts"]["name"] !== $name)  return array("success" => false, "error" => "Script status access denied to the specified name.", "errorcode" => "access_denied");
+				if ($info["running"])  return array("success" => false, "error" => "Script is currently running.  This API can only cancel queued scripts.", "errorcode" => "script_running");
 
-						return $this->GetQueuedStatusResult($id, $name, $info);
-					}
-					else
-					{
-						$info = $this->running[$userrow->id][$name][$id];
+				$info = $this->runqueue[$userrow->id][$name][$id];
 
-						return $this->GetRunningStatusResult($id, $name, $info);
-					}
-				}
+				// Remove this entry from the run queue.
+				$this->RemoveRunQueueEntry($userrow->id, $name, $id);
+
+				$info["loginfo"]["first"] = "[CANCEL]";
+				$info["loginfo"]["last"] = "[CANCEL]";
 
 				try
 				{
-					$row = $db->GetRow("SELECT", array(
-						"*",
-						"FROM" => "?",
-						"WHERE" => "id = ?",
-					), "log", $id);
+					$ts = microtime(true);
 
-					if (!$row)  return array("success" => false, "error" => "Unable to locate a log entry with the specified ID.", "errorcode" => "invalid_id");
-
-					if ($guestrow !== false && $guestrow->serverexts["scripts"]["name"] !== $row->script)  return array("success" => false, "error" => "Script status access denied to the specified name.", "errorcode" => "access_denied");
+					$db->Query("UPDATE", array("log", array(
+						"started" => $ts,
+						"finished" => $ts,
+						"info" => $info["loginfo"]
+					), "WHERE" => "id = ?"), $id);
 				}
 				catch (Exception $e)
 				{
-					return array("success" => false, "error" => "A database query failed while retrieving an ID.", "errorcode" => "db_query_error");
+					return array("success" => false, "error" => "A database query failed while updating the process log.", "errorcode" => "db_query_error");
 				}
 
-				return $this->GetFinalStatusResult($row);
+				// Finalize the process but don't trigger any monitor notifications.
+				$this->FinalizeProcess($userrow->id, $name, $id, false, $info);
+
+				return array("success" => true);
+			}
+			else if ($pathparts[3] === "status")
+			{
+				// /scripts/v1/status/ID
+				if ($reqmethod !== "GET")  return array("success" => false, "error" => "GET request required for:  /scripts/v1/status/ID", "errorcode" => "use_get_request");
+				if ($guestrow !== false && !$guestrow->serverexts["scripts"]["status"])  return array("success" => false, "error" => "Script status access denied.", "errorcode" => "access_denied");
+
+				if ($y < 5)
+				{
+					$queued = array();
+					foreach ($this->runqueue[$userrow->id] as $name => $idsinfo)  $queued[$name] = ($guestrow === false || $guestrow->serverexts["scripts"]["name"] === $name ? array_keys($idsinfo) : count($idsinfo));
+
+					$running = array();
+					foreach ($this->running[$userrow->id] as $name => $idsinfo)  $running[$name] = ($guestrow === false || $guestrow->serverexts["scripts"]["name"] === $name ? array_keys($idsinfo) : count($idsinfo));
+
+					return array("success" => true, "queued" => (object)$queued, "running" => (object)$running);
+				}
+				else
+				{
+					$id = $pathparts[4];
+
+					// If the script is queued or running, then don't access the database.
+					if (isset($this->idmap[$userrow->id]) && isset($this->idmap[$userrow->id][$id]))
+					{
+						$info = $this->idmap[$userrow->id][$id];
+						$name = $info["name"];
+						if ($guestrow !== false && $guestrow->serverexts["scripts"]["name"] !== $name)  return array("success" => false, "error" => "Script status access denied to the specified name.", "errorcode" => "access_denied");
+
+						if (!$info["running"])
+						{
+							$info = $this->runqueue[$userrow->id][$name][$id];
+
+							return $this->GetQueuedStatusResult($id, $name, $info);
+						}
+						else
+						{
+							$info = $this->running[$userrow->id][$name][$id];
+
+							return $this->GetRunningStatusResult($id, $name, $info);
+						}
+					}
+
+					try
+					{
+						$row = $db->GetRow("SELECT", array(
+							"*",
+							"FROM" => "?",
+							"WHERE" => "id = ?",
+						), "log", $id);
+
+						if (!$row)  return array("success" => false, "error" => "Unable to locate a log entry with the specified ID.", "errorcode" => "invalid_id");
+
+						if ($guestrow !== false && $guestrow->serverexts["scripts"]["name"] !== $row->script)  return array("success" => false, "error" => "Script status access denied to the specified name.", "errorcode" => "access_denied");
+					}
+					catch (Exception $e)
+					{
+						return array("success" => false, "error" => "A database query failed while retrieving an ID.", "errorcode" => "db_query_error");
+					}
+
+					return $this->GetFinalStatusResult($row);
+				}
 			}
 			else if ($pathparts[3] === "monitor")
 			{
@@ -1069,6 +1179,7 @@
 					if ($reqmethod !== "POST")  return array("success" => false, "error" => "POST request required for:  /scripts/v1/guest/create", "errorcode" => "use_post_request");
 					if (!isset($data["name"]))  return array("success" => false, "error" => "Missing 'name'.", "errorcode" => "missing_name");
 					if (!isset($data["run"]))  return array("success" => false, "error" => "Missing 'run'.", "errorcode" => "missing_run");
+					if (!isset($data["cancel"]))  return array("success" => false, "error" => "Missing 'cancel'.", "errorcode" => "missing_cancel");
 					if (!isset($data["status"]))  return array("success" => false, "error" => "Missing 'status'.", "errorcode" => "missing_status");
 					if (!isset($data["monitor"]))  return array("success" => false, "error" => "Missing 'monitor'.", "errorcode" => "missing_monitor");
 					if (!isset($data["expires"]))  return array("success" => false, "error" => "Missing 'expires'.", "errorcode" => "missing_expires");
@@ -1076,6 +1187,7 @@
 					$options = array(
 						"name" => (string)$data["name"],
 						"run" => (bool)(int)$data["run"],
+						"cancel" => (bool)(int)$data["cancel"],
 						"status" => (bool)(int)$data["status"],
 						"monitor" => (bool)(int)$data["monitor"]
 					);

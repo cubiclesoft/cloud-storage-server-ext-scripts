@@ -91,7 +91,7 @@
 			return array("success" => true);
 		}
 
-		public function RunScript($name, $args = array(), $stdin = "")
+		public function RunScript($name, $args = array(), $stdin = "", $queue = false)
 		{
 			$options = array(
 				"name" => $name,
@@ -99,12 +99,19 @@
 				"stdin" => $stdin
 			);
 
+			if ($queue !== false)  $options["queue"] = (int)$queue;
+
 			return $this->RunAPI("POST", "run", $options);
 		}
 
-		public function GetStatus($id)
+		public function CancelScript($id)
 		{
-			return $this->RunAPI("GET", "status/" . $id);
+			return $this->RunAPI("POST", "cancel/" . $id);
+		}
+
+		public function GetStatus($id = false)
+		{
+			return $this->RunAPI("GET", "status" . ($id !== false ? "/" . $id : ""));
 		}
 
 		public function StartMonitoring($name)
@@ -127,11 +134,12 @@
 			return $result;
 		}
 
-		public function CreateGuest($name, $run, $status, $monitor, $expires)
+		public function CreateGuest($name, $run, $cancel, $status, $monitor, $expires)
 		{
 			$options = array(
 				"name" => $name,
 				"run" => (int)(bool)$run,
+				"cancel" => (int)(bool)$cancel,
 				"status" => (int)(bool)$status,
 				"monitor" => (int)(bool)$monitor,
 				"expires" => (int)$expires
