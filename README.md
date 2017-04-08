@@ -40,7 +40,7 @@ Be sure to create a user using Cloud Storage Server `manage.php` and add the /sc
 
 Next, you'll need to initialize the user account's /scripts extension.  To do this, use the PHP SDK to run a script like:
 
-````
+````php
 <?php
 	require_once "sdk/support/sdk_cloud_storage_server_scripts.php";
 
@@ -152,7 +152,7 @@ The /scripts/v1/monitor API lets server A establish a WebSocket connection to se
 
 Example monitoring script:
 
-````
+````php
 <?php
 	require_once "sdk/support/sdk_cloud_storage_server_scripts.php";
 
