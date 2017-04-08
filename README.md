@@ -92,10 +92,10 @@ Example 'exectab.txt' file:
 test3
 
 # Does not start any processes but passes unescaped parameters to 'test4'.
-test4 -n @@1 @@2
+-n test4 @@1 @@2
 ````
 
-The above defines three script names test, test2, and test3.  Each one does something different.  The format for script execution lines is:
+The above defines several script names:  `test`, `test2`, `test3`, and `test4`.  Each one does something different.  The format for script execution lines is:
 
 `[options] scriptname [executable [params]]`
 
@@ -250,11 +250,12 @@ POST /scripts/v1/guest/create
 
 * name - Script name
 * run - Guest can run scripts
+* cancel - Guest can cancel queued scripts
 * status - Guest can retrieve the status of scripts
 * monitor - Guest can live monitor scripts
 * expires - Unix timestamp (integer)
 * Returns: success (boolean), id (string), info (array)
-* Summary: The 'info' array contains: apikey, created, expires, info (rootid, read, write, delete)
+* Summary: The 'info' array contains: apikey, created, expires, info (various)
 
 POST /scripts/v1/guest/delete/ID
 
