@@ -884,7 +884,7 @@
 				if (!isset($data["queue"]))  $data["queue"] = time();
 				if (!is_int($data["queue"]))  return array("success" => false, "error" => "Invalid 'queue'.  Expected a UNIX timestamp integer.", "errorcode" => "invalid_queue");
 				if ($guestrow !== false && !$guestrow->serverexts["scripts"]["run"])  return array("success" => false, "error" => "Execute/Run access denied.", "errorcode" => "access_denied");
-				if ($guestrow !== false && $guestrow->serverexts["scripts"]["name"] !== $data["name"])  return array("success" => false, "error" => "Script status access denied to the specified name.", "errorcode" => "access_denied");
+				if ($guestrow !== false && $guestrow->serverexts["scripts"]["name"] !== $data["name"])  return array("success" => false, "error" => "Script run access denied to the specified name.", "errorcode" => "access_denied");
 
 				$name = $data["name"];
 				$args = $this->exectabs[$userrow->id][$name];
