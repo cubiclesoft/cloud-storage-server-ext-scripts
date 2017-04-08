@@ -797,22 +797,7 @@
 
 			// Parse 'exectab.txt' if it has changed since the last API call.
 			$filename = $basedir . "/exectab.txt";
-			if (!isset($this->exectabsts[$userrow->id]))
-			{
-				$this->exectabsts[$userrow->id] = 0;
-
-				// Delete any leftover /status files.
-				$dir = @opendir($basedir . "/status");
-				if ($dir)
-				{
-					while (($file = @readdir($dir)) !== false)
-					{
-						if ($file !== "." && $file !== "..")  @unlink($basedir . "/status/" . $file);
-					}
-
-					@closedir($dir);
-				}
-			}
+			if (!isset($this->exectabsts[$userrow->id]))  $this->exectabsts[$userrow->id] = 0;
 			if ($this->exectabsts[$userrow->id] < filemtime($filename) && filemtime($filename) < time())
 			{
 				require_once $rootpath . "/support/cli.php";
