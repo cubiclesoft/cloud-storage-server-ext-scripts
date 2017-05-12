@@ -88,7 +88,7 @@ Example 'exectab.txt' file:
 # Run a PHP script as the same user/group as the Cloud Storage Server process (probably root) with a limit of one script running at a time and with a starting directory of /var/log/apache2.
 -d=/var/log/apache2 test2 /usr/bin/php /var/scripts/myscript2.php
 
-# Does not start any processes but will notify listening (via /scripts/v1/monitor) that 'test3' has finished running.
+# Does not start any processes but will notify listeners (via /scripts/v1/monitor) that 'test3' has finished running.
 test3
 
 # Does not start any processes but passes unescaped parameters to 'test4'.
