@@ -521,7 +521,7 @@
 									$prevuid = posix_geteuid();
 									$prevgid = posix_getegid();
 
-									if (isset($args["opts"]["user"]))
+									if (isset($info["args"]["opts"]["user"]))
 									{
 										$userinfo = $this->GetUserInfoByName($info["args"]["opts"]["user"]);
 										if ($userinfo !== false)
@@ -531,7 +531,7 @@
 										}
 									}
 
-									if (isset($args["opts"]["group"]))
+									if (isset($info["args"]["opts"]["group"]))
 									{
 										$groupinfo = $this->GetGroupInfoByName($info["args"]["opts"]["group"]);
 										if ($groupinfo !== false)  posix_setegid($groupinfo["gid"]);
