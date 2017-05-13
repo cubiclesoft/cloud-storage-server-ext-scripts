@@ -107,6 +107,7 @@ The full list of options for scripts is:
 * -i - Allow 'stdin' passthrough.  Without this option, passing non-empty 'stdin' strings to /scripts/v1/run is an error.
 * -m=num - Maximum queue length.  Default is unlimited.
 * -n - No process execution.  No parameter escaping.  Useful for passing parameters to monitors.
+* -r - Remove successful and cancelled script runs from the log.  The status/result won't be available after completion.
 * -s=num - The number of items in the queue that may run simultaneously.  Default is 1.
 * -u=user - The *NIX user to run the process under (*NIX only).
 

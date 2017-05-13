@@ -155,7 +155,7 @@
 		{
 			$info = @json_decode($row->info, true);
 
-			return array("success" => true, "id" => $row->id, "name" => $row->script, "state" => ($row->finished > 0 ? "done" : "incomplete_log"), "started" => (double)$row->started, "finished" => (double)$row->finished, "args" => $info["args"], "first" => (!count($info["tasks"]) ? $info["first"] : ""), "last" => (!count($info["tasks"]) ? $info["last"] : ""), "tasks" => $info["tasks"]);
+			return array("success" => true, "id" => $row->id, "name" => $row->script, "state" => ($row->finished > 0 ? "done" : "incomplete_log"), "started" => (double)$row->started, "finished" => (double)$row->finished, "args" => $info["args"], "first" => (!count($info["tasks"]) ? $info["first"] : ""), "last" => (!count($info["tasks"]) ? $info["last"] : ""), "tasks" => $info["tasks"], "removelog" => $info["args"]["removelog"]);
 		}
 
 		private function HasMonitor($uid, $name)
@@ -224,6 +224,8 @@
 
 					$this->NotifyMonitors($uid, $name, $result);
 					$this->NotifyMonitors($uid, "", $result);
+
+					if ($result["removelog"])  $db->Query("DELETE", array("log", "WHERE" => "id = ?"), array($id));
 				}
 				catch (Exception $e)
 				{
@@ -810,6 +812,7 @@
 						"i" => "stdinallowed",
 						"m" => "maxqueue",
 						"n" => "noexec",
+						"r" => "removelog",
 						"s" => "simultaneous",
 						"u" => "user"
 					),
@@ -820,6 +823,7 @@
 						"stdinallowed" => array("arg" => false),
 						"maxqueue" => array("arg" => true),
 						"noexec" => array("arg" => false),
+						"removelog" => array("arg" => false),
 						"simultaneous" => array("arg" => true),
 						"user" => array("arg" => true)
 					),
@@ -836,6 +840,7 @@
 					{
 						$args = CLI::ParseCommandLine($cmdopts, ". " . $line);
 
+						if (!isset($args["opts"]["removelog"]))  $args["opts"]["removelog"] = false;
 						if (!isset($args["opts"]["simultaneous"]) || $args["opts"]["simultaneous"] < 1)  $args["opts"]["simultaneous"] = 1;
 						if (!isset($args["opts"]["envvar"]))  $args["opts"]["envvar"] = array();
 
@@ -1032,13 +1037,20 @@
 
 				try
 				{
-					$ts = microtime(true);
+					if ($info["loginfo"]["args"]["removelog"])
+					{
+						$db->Query("DELETE", array("log", "WHERE" => "id = ?"), array($id));
+					}
+					else
+					{
+						$ts = microtime(true);
 
-					$db->Query("UPDATE", array("log", array(
-						"started" => $ts,
-						"finished" => $ts,
-						"info" => $info["loginfo"]
-					), "WHERE" => "id = ?"), $id);
+						$db->Query("UPDATE", array("log", array(
+							"started" => $ts,
+							"finished" => $ts,
+							"info" => json_encode($info["loginfo"], JSON_UNESCAPED_SLASHES)
+						), "WHERE" => "id = ?"), $id);
+					}
 				}
 				catch (Exception $e)
 				{
