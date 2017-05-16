@@ -840,6 +840,7 @@
 					{
 						$args = CLI::ParseCommandLine($cmdopts, ". " . $line);
 
+						if (!isset($args["opts"]["noexec"]))  $args["opts"]["noexec"] = false;
 						if (!isset($args["opts"]["removelog"]))  $args["opts"]["removelog"] = false;
 						if (!isset($args["opts"]["simultaneous"]) || $args["opts"]["simultaneous"] < 1)  $args["opts"]["simultaneous"] = 1;
 						if (!isset($args["opts"]["envvar"]))  $args["opts"]["envvar"] = array();
