@@ -155,7 +155,7 @@
 		{
 			$info = @json_decode($row->info, true);
 
-			return array("success" => true, "id" => $row->id, "name" => $row->script, "state" => ($row->finished > 0 ? "done" : "incomplete_log"), "started" => (double)$row->started, "finished" => (double)$row->finished, "args" => $info["args"], "first" => (!count($info["tasks"]) ? $info["first"] : ""), "last" => (!count($info["tasks"]) ? $info["last"] : ""), "tasks" => $info["tasks"], "removelog" => $info["args"]["removelog"]);
+			return array("success" => true, "id" => $row->id, "name" => $row->script, "state" => ($row->finished > 0 ? "done" : "incomplete_log"), "started" => (double)$row->started, "finished" => (double)$row->finished, "args" => $info["args"], "first" => (!count($info["tasks"]) ? $info["first"] : ""), "last" => (!count($info["tasks"]) ? $info["last"] : ""), "tasks" => $info["tasks"], "removelog" => $info["args"]["opts"]["removelog"]);
 		}
 
 		private function HasMonitor($uid, $name)
