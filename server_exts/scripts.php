@@ -202,7 +202,7 @@
 
 			@unlink($info["basedir"] . "/status/" . $id . ".json");
 
-			if ($db !== false && $this->HasMonitor($uid, $name))
+			if ($db !== false)
 			{
 				try
 				{
