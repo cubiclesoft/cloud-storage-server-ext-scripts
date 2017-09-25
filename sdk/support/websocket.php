@@ -1,6 +1,6 @@
 <?php
 	// CubicleSoft PHP WebSocket class.
-	// (C) 2016 CubicleSoft.  All Rights Reserved.
+	// (C) 2017 CubicleSoft.  All Rights Reserved.
 
 	// Implements RFC 6455 (WebSocket protocol).
 	// Requires the CubicleSoft PHP HTTP/HTTPS class.
@@ -320,7 +320,7 @@
 			if ($read)
 			{
 				$result = @fread($this->fp, 65536);
-				if ($result === false || feof($this->fp))  return array("success" => false, "error" => self::WSTranslate("ProcessQueuesAndTimeoutState() failed due to fread() failure.  Most likely cause:  Connection failure."), "errorcode" => "fread_failed");
+				if ($result === false || ($result === "" && feof($this->fp)))  return array("success" => false, "error" => self::WSTranslate("ProcessQueuesAndTimeoutState() failed due to fread() failure.  Most likely cause:  Connection failure."), "errorcode" => "fread_failed");
 
 				if ($result !== "")
 				{
@@ -340,7 +340,7 @@
 			if ($write)
 			{
 				$result = @fwrite($this->fp, $this->writedata);
-				if ($result === false || feof($this->fp))  return array("success" => false, "error" => self::WSTranslate("ProcessQueuesAndTimeoutState() failed due to fwrite() failure.  Most likely cause:  Connection failure."), "errorcode" => "fwrite_failed");
+				if ($result === false || ($result === "" && feof($this->fp)))  return array("success" => false, "error" => self::WSTranslate("ProcessQueuesAndTimeoutState() failed due to fwrite() failure.  Most likely cause:  Connection failure."), "errorcode" => "fwrite_failed");
 
 				$this->rawsendsize += strlen($result);
 				$this->writedata = (string)substr($this->writedata, $result);

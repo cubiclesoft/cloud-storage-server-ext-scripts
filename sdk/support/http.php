@@ -733,9 +733,9 @@
 							{
 								$readfp = NULL;
 								$writefp = array($state["fp"]);
-								$exceptfp = NULL;
+								$exceptfp = array($state["fp"]);
 								$result = @stream_select($readfp, $writefp, $exceptfp, 0);
-								if ($result === false)  return self::CleanupErrorState($state, array("success" => false, "error" => self::HTTPTranslate("A stream_select() failure occurred.  Most likely cause:  Connection failure."), "errorcode" => "stream_select_failed"));
+								if ($result === false || count($exceptfp))  return self::CleanupErrorState($state, array("success" => false, "error" => self::HTTPTranslate("A stream_select() failure occurred.  Most likely cause:  Connection failure."), "errorcode" => "stream_select_failed"));
 
 								if (!count($writefp))  return array("success" => false, "error" => self::HTTPTranslate("Connection not established yet."), "errorcode" => "no_data");
 							}
@@ -1323,7 +1323,7 @@
 			if ($url["scheme"] != "http" && $url["scheme"] != "https")  return array("success" => false, "error" => self::HTTPTranslate("RetrieveWebpage() only supports the 'http' and 'https' protocols."), "errorcode" => "protocol_check");
 
 			$secure = ($url["scheme"] == "https");
-			$protocol = ($secure ? (isset($options["protocol"]) ? strtolower($options["protocol"]) : "tls") : "tcp");
+			$protocol = ($secure ? (isset($options["protocol"]) ? strtolower($options["protocol"]) : "ssl") : "tcp");
 			if (function_exists("stream_get_transports") && !in_array($protocol, stream_get_transports()))  return array("success" => false, "error" => self::HTTPTranslate("The desired transport protocol '%s' is not installed.", $protocol), "errorcode" => "transport_not_installed");
 			$host = str_replace(" ", "-", self::HeaderValueCleanup($url["host"]));
 			if ($host == "")  return array("success" => false, "error" => self::HTTPTranslate("Invalid URL."));
@@ -1349,7 +1349,7 @@
 				$proxyurl = self::ExtractURL($proxyurl);
 
 				$proxysecure = ($proxyurl["scheme"] == "https");
-				$proxyprotocol = ($proxysecure ? (isset($options["proxyprotocol"]) ? strtolower($options["proxyprotocol"]) : "tls") : "tcp");
+				$proxyprotocol = ($proxysecure ? (isset($options["proxyprotocol"]) ? strtolower($options["proxyprotocol"]) : "ssl") : "tcp");
 				if (function_exists("stream_get_transports") && !in_array($proxyprotocol, stream_get_transports()))  return array("success" => false, "error" => self::HTTPTranslate("The desired transport proxy protocol '%s' is not installed.", $proxyprotocol), "errorcode" => "proxy_transport_not_installed");
 				$proxyhost = str_replace(" ", "-", self::HeaderValueCleanup($proxyurl["host"]));
 				$proxyport = ((int)$proxyurl["port"] ? (int)$proxyurl["port"] : ($proxysecure ? 443 : 80));
@@ -1554,7 +1554,7 @@
 						self::ProcessSSLOptions($options, "proxysslopts", $host);
 						foreach ($options["proxysslopts"] as $key => $val)  @stream_context_set_option($context, "ssl", $key, $val);
 					}
-					$fp = @stream_socket_client($proxyprotocol . "://" . $proxyhost . ":" . $proxyport, $errornum, $errorstr, $options["proxyconnecttimeout"], STREAM_CLIENT_CONNECT | (isset($options["async"]) && $options["async"] ? STREAM_CLIENT_ASYNC_CONNECT : 0), $context);
+					$fp = @stream_socket_client($proxyprotocol . "://" . $proxyhost . ":" . $proxyport, $errornum, $errorstr, $options["proxyconnecttimeout"], (isset($options["async"]) && $options["async"] ? STREAM_CLIENT_ASYNC_CONNECT : STREAM_CLIENT_CONNECT), $context);
 				}
 
 				if ($fp === false)  return array("success" => false, "error" => self::HTTPTranslate("Unable to establish a connection to '%s'.", ($proxysecure ? $proxyprotocol . "://" : "") . $proxyhost . ":" . $proxyport), "info" => $errorstr . " (" . $errornum . ")", "errorcode" => "proxy_connect");
@@ -1575,7 +1575,7 @@
 						self::ProcessSSLOptions($options, "sslopts", $host);
 						foreach ($options["sslopts"] as $key => $val)  @stream_context_set_option($context, "ssl", $key, $val);
 					}
-					$fp = @stream_socket_client($protocol . "://" . $host . ":" . $port, $errornum, $errorstr, $options["connecttimeout"], STREAM_CLIENT_CONNECT | (isset($options["async"]) && $options["async"] ? STREAM_CLIENT_ASYNC_CONNECT : 0), $context);
+					$fp = @stream_socket_client($protocol . "://" . $host . ":" . $port, $errornum, $errorstr, $options["connecttimeout"], (isset($options["async"]) && $options["async"] ? STREAM_CLIENT_ASYNC_CONNECT : STREAM_CLIENT_CONNECT), $context);
 				}
 
 				if ($fp === false)  return array("success" => false, "error" => self::HTTPTranslate("Unable to establish a connection to '%s'.", ($secure ? $protocol . "://" : "") . $host . ":" . $port), "info" => $errorstr . " (" . $errornum . ")", "errorcode" => "connect_failed");
