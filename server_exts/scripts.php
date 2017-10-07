@@ -8,9 +8,11 @@
 
 		public function Install()
 		{
-			global $rootpath;
+			global $rootpath, $config;
 
 			@mkdir($rootpath . "/user_init/scripts", 0770, true);
+			@chmod($rootpath . "/user_init/scripts", 02770);
+			if ($config["serviceuser"] !== "")  @chown($rootpath . "/user_init/scripts", $config["serviceuser"]);
 		}
 
 		public function AddUserExtension($userrow)
