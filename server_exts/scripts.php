@@ -19,7 +19,7 @@
 		{
 			global $args, $suppressoutput;
 
-			$guests = CLI::GetYesNoUserInputWithArgs($args, "ext_guest", "[Scripts Ext] Allow guest creation/deletion", "Y", "", $suppressoutput);
+			$guests = CLI::GetYesNoUserInputWithArgs($args, "ext_guests", "[Scripts Ext] Allow guest creation/deletion", "Y", "", $suppressoutput);
 
 			return array("success" => true, "info" => array("guests" => $guests));
 		}
