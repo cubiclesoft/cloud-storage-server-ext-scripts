@@ -286,6 +286,11 @@
 			return ($this->writedata !== "");
 		}
 
+		public function NumWriteMessages()
+		{
+			return count($this->writemessages);
+		}
+
 		// Dangerous but allows for stream_select() calls on multiple, separate stream handles.
 		public function GetStream()
 		{
@@ -296,6 +301,9 @@
 		public function Wait($timeout = false)
 		{
 			if ($this->fp === false || $this->state === self::STATE_CONNECTING)  return array("success" => false, "error" => self::WSTranslate("Connection not established."), "errorcode" => "no_connection");
+
+			$result = $this->ProcessReadData();
+			if (!$result["success"])  return $result;
 
 			$this->FillWriteData();
 
@@ -313,13 +321,13 @@
 		}
 
 		// A mostly internal function.  Useful for managing multiple simultaneous WebSocket connections.
-		public function ProcessQueuesAndTimeoutState($read, $write)
+		public function ProcessQueuesAndTimeoutState($read, $write, $readsize = 65536)
 		{
 			if ($this->fp === false || $this->state === self::STATE_CONNECTING)  return array("success" => false, "error" => self::WSTranslate("Connection not established."), "errorcode" => "no_connection");
 
 			if ($read)
 			{
-				$result = @fread($this->fp, 65536);
+				$result = @fread($this->fp, $readsize);
 				if ($result === false || ($result === "" && feof($this->fp)))  return array("success" => false, "error" => self::WSTranslate("ProcessQueuesAndTimeoutState() failed due to fread() failure.  Most likely cause:  Connection failure."), "errorcode" => "fread_failed");
 
 				if ($result !== "")
@@ -340,10 +348,16 @@
 			if ($write)
 			{
 				$result = @fwrite($this->fp, $this->writedata);
-				if ($result === false || ($result === "" && feof($this->fp)))  return array("success" => false, "error" => self::WSTranslate("ProcessQueuesAndTimeoutState() failed due to fwrite() failure.  Most likely cause:  Connection failure."), "errorcode" => "fwrite_failed");
+				if ($result === false || ($this->writedata === "" && feof($this->fp)))  return array("success" => false, "error" => self::WSTranslate("ProcessQueuesAndTimeoutState() failed due to fwrite() failure.  Most likely cause:  Connection failure."), "errorcode" => "fwrite_failed");
 
-				$this->rawsendsize += strlen($result);
-				$this->writedata = (string)substr($this->writedata, $result);
+				if ($result)
+				{
+					$this->rawsendsize += $result;
+					$this->writedata = (string)substr($this->writedata, $result);
+
+					$this->lastkeepalive = time();
+					$this->keepalivesent = false;
+				}
 			}
 
 			// Handle timeout state.
