@@ -6,7 +6,7 @@
 	if (!class_exists("CloudStorageServer_APIBase", false))  require_once str_replace("\\", "/", dirname(__FILE__)) . "/sdk_cloud_storage_server_api_base.php";
 
 	// This class only supports the /scripts API.
-	class CloudStorageServerScripts
+	class CloudStorageServerScripts extends CloudStorageServer_APIBase
 	{
 		public function __construct()
 		{
