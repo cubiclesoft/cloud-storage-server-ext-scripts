@@ -343,7 +343,7 @@
 									if ($info["loginfo"]["first"] === false)  $this->running[$uid][$name][$id]["loginfo"]["first"] = substr($line, 0, 10000);
 									$this->running[$uid][$name][$id]["loginfo"]["last"] = substr($line, 0, 10000);
 
-									if ($line{0} === "[")
+									if ($line[0] === "[")
 									{
 										$pos = strpos($line, "]");
 										if ($pos !== false)
@@ -839,7 +839,7 @@
 				{
 					$line = trim($line);
 
-					if ($line !== "" && $line{0} !== "#" && substr($line, 0, 2) !== "//")
+					if ($line !== "" && $line[0] !== "#" && substr($line, 0, 2) !== "//")
 					{
 						$args = CLI::ParseCommandLine($cmdopts, ". " . $line);
 
