@@ -5,6 +5,8 @@ A powerful and flexible cross-platform /scripts extension for the [self-hosted c
 
 The /scripts extension is useful for starting long-running scripts that take a while to complete and tracking completion status, running scripts as other users (e.g. root/SYSTEM), and notifying other systems that are monitoring for script completions that they can start doing work immediately instead of polling every 1-5 minutes and being told by the remote system that there is nothing to do.
 
+NOTE:  This extension is considered largely obsolete in favor of [xcron](https://github.com/cubiclesoft/xcron), which can do most of the same things but far more elegantly and with a richer feature set.
+
 [![Donate](https://cubiclesoft.com/res/donate-shield.png)](https://cubiclesoft.com/donate/) [![Discord](https://img.shields.io/discord/777282089980526602?label=chat&logo=discord)](https://cubiclesoft.com/product-support/github/)
 
 Features
